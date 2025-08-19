@@ -15,12 +15,12 @@ Let's say we have a simple blogging system. Our models are Post and Category. A 
 
 ```ruby
 # app/models/post.rb
-class Post < ActiveRecord::Base
+class Post < ApplicationRecord
   belongs_to :category
 end
 
 # app/models/category.rb
-class Category < ActiveRecord::Base
+class Category < ApplicationRecord
   has_many :posts
 end
 ```
@@ -32,7 +32,7 @@ Now we need to build the functionality for a user to create a Post. We're going 
 As a first pass, we might build a form like this:
 
 ```erb
-<%= form_for @post do |f| %>
+<%= form_with model: @post do |f| %>
   <%= f.label :category_id, :category %><%= f.text_field :category_id %>
   <%= f.text_field :content %>
   <%= f.submit %>
@@ -78,14 +78,14 @@ Since our Active Record models are still just Ruby classes, we can define our ow
 
 ```ruby
 # app/models/post.rb
-class Post < ActiveRecord::Base
-   def category_name=(name)
-     self.category = Category.find_or_create_by(name: name)
-   end
+class Post < ApplicationRecord
+  def category_name=(name)
+    self.category = Category.find_or_create_by(name: name)
+  end
 
-   def category_name
-      self.category ? self.category.name : nil
-   end
+  def category_name
+    self.category ? self.category.name : nil
+  end
 end
 ```
 
@@ -121,7 +121,7 @@ Notice the difference –– we're now accepting a category name, rather than a 
 We can change the view as well now:
 
 ```erb
-<%= form_for @post do |f| %>
+<%= form_with model: @post do |f| %>
   <%= f.label :category_name %>
   <%= f.text_field :category_name %>
   <%= f.text_field :content %>
@@ -133,10 +133,10 @@ Now the user can enter a category by name (instead of needing to look up its ID)
 
 ## Selecting from existing categories
 
-If we want to let the user pick from existing categories, we can use a [Collection Select](http://apidock.com/rails/ActionView/Helpers/FormOptionsHelper/collection_select) helper to render a `<select>` tag:
+If we want to let the user pick from existing categories, we can use a [Collection Select](https://api.rubyonrails.org/classes/ActionView/Helpers/FormBuilder.html#method-i-collection_select) helper to render a `<select>` tag:
 
 ```erb
-<%= form_for @post do |f| %>
+<%= form_with model: @post do |f| %>
   <%= f.collection_select :category_name, Category.all, :name, :name %>
   <%= f.text_field :content %>
   <%= f.submit %>
@@ -152,14 +152,14 @@ That might be what you want. For example, the content management system for a ma
 In our case, however, we want to give users the flexibility to create a new category _or_ pick an existing one. What we want is autocompletion, which we can get with a [`datalist`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/datalist):
 
 ```erb
-<%= form_for @post do |f| %>
+<%= form_with model: @post do |f| %>
   <%= f.text_field :category_name, list: "categories_autocomplete" %>
   <datalist id="categories_autocomplete">
     <% Category.all.each do |category| %>
       <option value="<%= category.name %>">
     <% end %>
   </datalist>
-  <textarea name="post[content]"></textarea>
+  <%= f.text_area :content %>
   <%= f.submit %>
 <% end %>
 ```
@@ -172,7 +172,7 @@ Let's think about the reverse association. Categories have many posts.
 
 ```ruby
 # app/models/category.rb
-class Category < ActiveRecord::Base
+class Category < ApplicationRecord
   has_many :posts
 end
 ```
@@ -181,12 +181,12 @@ Given a category, how do we let a user specify many different posts to categoriz
 
 ### Using array parameters
 
-Rails uses a [naming convention](http://guides.rubyonrails.org/v3.2.13/form_helpers.html#understanding-parameter-naming-conventions) to let you submit an array of values to a controller.
+Rails uses a [naming convention](https://guides.rubyonrails.org/form_helpers.html#form-input-naming-conventions-and-params-hash) to let you submit an array of values to a controller.
 
 If you put this in a view, it looks like this.
 
 ```erb
-<%= form_for @category do |f| %>
+<%= form_with model: @category do |f| %>
   <input name="category[post_ids][]">
   <input name="category[post_ids][]">
   <input name="category[post_ids][]">
@@ -200,7 +200,7 @@ We can write a setter method for this, just like we did for `category_name`:
 
 ```ruby
 # app/models/category.rb
-class Category < ActiveRecord::Base
+class Category < ApplicationRecord
    def post_ids=(ids)
      ids.each do |id|
        post = Post.find(id)
@@ -238,5 +238,5 @@ end
 ## Resources
 
 - [datalist](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/datalist)
-- [collection_select](http://apidock.com/rails/ActionView/Helpers/FormOptionsHelper/collection_select)
-- [naming convention](http://guides.rubyonrails.org/v3.2.13/form_helpers.html#understanding-parameter-naming-conventions)
+- [collection_select](https://api.rubyonrails.org/classes/ActionView/Helpers/FormBuilder.html#method-i-collection_select)
+- [Form Input Naming Conventions (Rails Guides)](https://guides.rubyonrails.org/form_helpers.html#form-input-naming-conventions-and-params-hash)
